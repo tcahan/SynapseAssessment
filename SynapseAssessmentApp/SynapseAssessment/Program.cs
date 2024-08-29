@@ -1,6 +1,9 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using SynapseAssessment.MainApp;
+using SynapseAssessment.Services;
 
 var builder = new ConfigurationBuilder();
 BuildConfig(builder);
@@ -14,13 +17,16 @@ Log.Logger = new LoggerConfiguration()
 	.CreateLogger();
 
 var host = Host.CreateDefaultBuilder()
+	.ConfigureServices((context, services) =>
+	{
+		services.AddTransient<IMainApp, MainApp>();
+		services.AddScoped<IApiService, ApiService>();
+	})
 	.UseSerilog()
 	.Build();
 
-// Test code to be removed later
-Log.Logger.Information("Reading Test config: {value}", configuration.GetValue<string>("Test"));
-Log.Logger.Debug("This is a debug message; It should not be logged at the current Infomration level");
-
+var mainApp = ActivatorUtilities.CreateInstance<MainApp>(host.Services);
+mainApp.Start();
 
 /// <summary>
 /// Configures the configuration builder to support
