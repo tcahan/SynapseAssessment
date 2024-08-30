@@ -13,16 +13,18 @@ public class ApiService : IApiService
 {
 	private readonly IConfiguration _config;
 	private readonly ILogger<ApiService> _log;
+	private readonly HttpClient _httpClient;
 
 	/// <summary>
 	/// Constructor for ApiService
 	/// </summary>
 	/// <param name="config">IConfiguration object</param>
 	/// <param name="log">ILogger object</param>
-	public ApiService(IConfiguration config, ILogger<ApiService> log)
+	public ApiService(IConfiguration config, ILogger<ApiService> log, HttpClient httpClient)
 	{
 		_config = config;
 		_log = log;
+		_httpClient = httpClient;
 	}
 
 	/// <summary>
@@ -31,20 +33,18 @@ public class ApiService : IApiService
 	/// <returns>JArray of the order data returned from the Api or an empty array when unsuccessful response code returned</returns>
 	public async Task<JObject[]> FetchMedicalEquipmentOrders()
 	{
-		using (HttpClient httpClient = new HttpClient())
+
+		var ordersApiUrl = _config.GetValue<string>("ApiUrls:OrdersApi");
+		var response = await _httpClient.GetAsync(ordersApiUrl);
+		if (response.IsSuccessStatusCode)
 		{
-			string ordersApiUrl = _config.GetValue<string>("ApiUrls:OrdersApi");
-			var response = await httpClient.GetAsync(ordersApiUrl);
-			if (response.IsSuccessStatusCode)
-			{
-				var ordersData = await response.Content.ReadAsStringAsync();
-				return JArray.Parse(ordersData).ToObject<JObject[]>();
-			}
-			else
-			{
-				_log.LogWarning("Failed to fetch orders from API.");
-				return new JObject[0];
-			}
+			var ordersData = await response.Content.ReadAsStringAsync();
+			return JArray.Parse(ordersData).ToObject<JObject[]>();
+		}
+		else
+		{
+			_log.LogWarning("Failed to fetch orders from API.");
+			return new JObject[0];
 		}
 	}
 
@@ -73,20 +73,18 @@ public class ApiService : IApiService
 	/// <param name="order">JObject of order</param>
 	public async Task UpdateOrder(JObject order)
 	{
-		using (HttpClient httpClient = new HttpClient())
-		{
-			string updateApiUrl = _config.GetValue<string>("ApiUrls:UpdateApi");
-			var content = new StringContent(order.ToString(), System.Text.Encoding.UTF8, "application/json");
-			var response = await httpClient.PostAsync(updateApiUrl, content);
 
-			if (response.IsSuccessStatusCode)
-			{
-				_log.LogInformation("Updated order sent for processing: {OrderId}", order["OrderId"]);
-			}
-			else
-			{
-				_log.LogWarning("Failed to send updated order for processing: {OrderId}", order["OrderId"]);
-			}
+		var updateApiUrl = _config.GetValue<string>("ApiUrls:UpdateApi");
+		var content = new StringContent(order.ToString(), System.Text.Encoding.UTF8, "application/json");
+		var response = await _httpClient.PostAsync(updateApiUrl, content);
+
+		if (response.IsSuccessStatusCode)
+		{
+			_log.LogInformation("Updated order sent for processing: {OrderId}", order["OrderId"]);
+		}
+		else
+		{
+			_log.LogWarning("Failed to send updated order for processing: {OrderId}", order["OrderId"]);
 		}
 	}
 
@@ -96,9 +94,9 @@ public class ApiService : IApiService
 	/// <returns>Boolean indicating if the api endpoints are configured</returns>
 	public bool ValidateApiEndpoints()
 	{
-		string ordersApiUrl = _config.GetValue<string>("ApiUrls:OrdersApi");
-		string alertApiUrl = _config.GetValue<string>("ApiUrls:AlertApi");
-		string updateApiUrl = _config.GetValue<string>("ApiUrls:UpdateApi");
+		var ordersApiUrl = _config.GetValue<string>("ApiUrls:OrdersApi");
+		var alertApiUrl = _config.GetValue<string>("ApiUrls:AlertApi");
+		var updateApiUrl = _config.GetValue<string>("ApiUrls:UpdateApi");
 
 		if (string.IsNullOrEmpty(ordersApiUrl) || string.IsNullOrEmpty(alertApiUrl) || string.IsNullOrEmpty(updateApiUrl))
 		{
@@ -126,7 +124,9 @@ public class ApiService : IApiService
 	/// <returns>Boolean indicating delivered status</returns>
 	private bool IsItemDelivered(JToken item)
 	{
-		return item["Status"].ToString().Equals("Delivered", StringComparison.OrdinalIgnoreCase);
+		var itemStatus = item["Status"].ToString();
+		var isDelivered = itemStatus.Equals("Delivered", StringComparison.OrdinalIgnoreCase);
+		return isDelivered;
 	}
 
 	/// <summary>
@@ -135,25 +135,22 @@ public class ApiService : IApiService
 	/// <param name="orderId">The order id for the alert</param>
 	private void SendAlertMessage(JToken item, string orderId)
 	{
-		using (HttpClient httpClient = new HttpClient())
+		string alertApiUrl = _config.GetValue<string>("ApiUrls:AlertApi");
+		var alertData = new
 		{
-			string alertApiUrl = _config.GetValue<string>("ApiUrls:AlertApi");
-			var alertData = new
-			{
-				Message = $"Alert for delivered item: Order {orderId}, Item: {item["Description"]}, " +
-						  $"Delivery Notifications: {item["deliveryNotification"]}"
-			};
-			var content = new StringContent(JObject.FromObject(alertData).ToString(), System.Text.Encoding.UTF8, "application/json");
-			var response = httpClient.PostAsync(alertApiUrl, content).Result;
+			Message = $"Alert for delivered item: Order {orderId}, Item: {item["Description"]}, " +
+					  $"Delivery Notifications: {item["deliveryNotification"]}"
+		};
+		var content = new StringContent(JObject.FromObject(alertData).ToString(), System.Text.Encoding.UTF8, "application/json");
+		var response = _httpClient.PostAsync(alertApiUrl, content).Result;
 
-			if (response.IsSuccessStatusCode)
-			{
-				_log.LogInformation("Alert sent for delivered item: {description}", item["Description"]);
-			}
-			else
-			{
-				_log.LogWarning("Failed to send alert for delivered item: {description}", item["Description"]);
-			}
+		if (response.IsSuccessStatusCode)
+		{
+			_log.LogInformation("Alert sent for delivered item: {description}", item["Description"]);
+		}
+		else
+		{
+			_log.LogWarning("Failed to send alert for delivered item: {description}", item["Description"]);
 		}
 	}
 }

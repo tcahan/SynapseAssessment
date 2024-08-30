@@ -32,18 +32,14 @@ Running the application will be fairly straightforward as this is going to be a 
 
 Clone or download a zip of the repository from GitHub.
 
-_Additional instructions may be provided depending on time. These are common practices, so may not truly be necessary._
-
 ### SynapseAssessment Application
 
 This is the main application that has taken the provided code and refactored into something production ready. As part of this process, a standard appsettings.json configuration file has been included in the project. Please configure the following settings as needed.
 
-- ordersApiUrl
-- alertApiUrl
-- updateApiUrl
-- Logging level
-
-_Section will be updated with actual configuration names once implemented_
+- ApiUrls:OrdersApi
+- ApiUrls:AlertApi
+- ApiUrls:UpdateApi
+- Serilog":MinimumLevel:Default
 
 ## Design Decisions
 
@@ -57,14 +53,24 @@ As I have some experience with xUnit for testing, as well as it being a popular 
 
 ### Error Handling
 
-I thought about a couple of different ways of handling the errors with the application. Originally I had considered an approach that would catch and throw the errors in each call of my ApiService class. This would allow me to provide a custom error message, specific to the issue, and then throw this ultimately to the *Start* method's catch block. I decided against this approach to allow for not always stopping the application on less severe issues. Additionally, since some calls are nested, the bubbling up of the exceptions with custom messages could start to get messy.
+I thought about a couple of different ways of handling the errors with the application. Originally I had considered an approach that would catch and throw the errors in each call of my ApiService class. This would allow me to provide a custom error message, specific to the issue, and then throw this ultimately to the _Start_ method's catch block. I decided against this approach to allow for not always stopping the application on less severe issues. Additionally, since some calls are nested, the bubbling up of the exceptions with custom messages could start to get messy.
 
-I decided on another common approach of just writing one try/catch block to handle exceptions around the main entry point in *Start*. This will simplify the exception handling. This is the approach I have often taken in other applications where the event handler has a try/catch and anything called by that handler does not have its own.
+I decided on another common approach of just writing one try/catch block to handle exceptions around the main entry point in _Start_. This will simplify the exception handling. This is the approach I have often taken in other applications where the event handler has a try/catch and anything called by that handler does not have its own.
 
 Additionally, I noted in the comments about stack trace and its inclusion in logging. For this implementation I chose not to include the stack trace as things will get very messy for the log messages. I offered a couple of alternative solutions for this to either log a lower level message for the stack trace, useful for debugging a known issue, or the option of creating an error table in a database that handles the detailed specifics of exceptions only, no other log messages. The table would provide a good way for someone running this application to point to a specific issue they had a problem with by referencing a returned error id value. Very helpful in a scenario where users can create support tickets as well as just for debugging problems.
 
 ### Method Naming
 
-Renamed the *SendAlertAndUpdateOrder* method to just *UpdateOrder*. There is currently no logic to send an alert here as it is handled in the *ProcessOrder* method when status is delivered.
+Renamed the _SendAlertAndUpdateOrder_ method to just _UpdateOrder_. There is currently no logic to send an alert here as it is handled in the _ProcessOrder_ method when status is delivered.
 
-_Section will be updated as decisions are made._
+### F5 Running
+
+The current implementation of running the application is expected to break unless actual API endpoints. Mocking inside of the actual application, not just the tests can be done if desire, but it feels like changes such as this are beyond the scope of a short project.
+
+### JObject
+
+There are a lot of JObjects used in this appliction. Under normal circumstances I would refactor to use a more modern approach with class models and json serialization.
+
+### Update to HttpClient code
+
+In order to mock the api calls, I had to make some tweaks to how the httpclient was implemented. I removed the using statements and changed the approach to injectiong the HttpClient after registering the service AddHttpClient() in my program.cs configuration. Since this implicitly calls the factory, this approach is an acceptable replacement that will allow me to then pass in a mocked httpclient for testing of the Api calls.

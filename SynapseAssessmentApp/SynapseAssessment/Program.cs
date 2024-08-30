@@ -5,6 +5,7 @@ using Serilog;
 using SynapseAssessment.MainApp;
 using SynapseAssessment.Services;
 
+
 var builder = new ConfigurationBuilder();
 BuildConfig(builder);
 IConfiguration configuration = builder.Build();
@@ -21,6 +22,7 @@ var host = Host.CreateDefaultBuilder()
 	{
 		services.AddTransient<IMainApp, MainApp>();
 		services.AddScoped<IApiService, ApiService>();
+		services.AddHttpClient();
 	})
 	.UseSerilog()
 	.Build();
