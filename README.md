@@ -39,13 +39,17 @@ This is the main application that has taken the provided code and refactored int
 - ApiUrls:OrdersApi
 - ApiUrls:AlertApi
 - ApiUrls:UpdateApi
-- Serilog":MinimumLevel:Default
+- Serilog:MinimumLevel:Default
+
+### Running the code
+
+The application will only run successfully if actual endpoints are configured. See the note in the next section for details. Tests can be run from the SynapseAssessment.Tests project.
 
 ## Design Decisions
 
 ### Logging - Serilog
 
-Logging will be handled with Serilog. This will still output to the console and debug, but can easily be configured to write to a database log table once one is included in the app.
+Logging is handled with Serilog. This will still output to the console and debug, but can easily be configured to write to a database log table once one is included in the app.
 
 ### Testing - xUnit
 
@@ -65,7 +69,9 @@ Renamed the _SendAlertAndUpdateOrder_ method to just _UpdateOrder_. There is cur
 
 ### F5 Running
 
-The current implementation of running the application is expected to break unless actual API endpoints. Mocking inside of the actual application, not just the tests can be done if desire, but it feels like changes such as this are beyond the scope of a short project.
+The current implementation of running the application is expected to break unless actual API endpoints exist. Mocking inside of the actual application, not just the tests can be done if desired when running locally, but it feels like changes such as this are beyond the scope of a short project.
+
+Additionally, as noted in a code comment, we could cause the application to at least run successfully by adding api endpoint health check calls to the _ValidateApiEndpoints_ method. When failing one of these api checks, the code would then not attempt to call these endpoints and execute successfully, although orders would of course not be processed.
 
 ### JObject
 
@@ -73,4 +79,4 @@ There are a lot of JObjects used in this appliction. Under normal circumstances 
 
 ### Update to HttpClient code
 
-In order to mock the api calls, I had to make some tweaks to how the httpclient was implemented. I removed the using statements and changed the approach to injectiong the HttpClient after registering the service AddHttpClient() in my program.cs configuration. Since this implicitly calls the factory, this approach is an acceptable replacement that will allow me to then pass in a mocked httpclient for testing of the Api calls.
+In order to mock the api calls, I had to make some tweaks to how the HttpClient was implemented. I removed the using statements and changed the approach to injectiong the HttpClient after registering the service AddHttpClient() in my program.cs configuration. Since this implicitly calls the factory, this approach is an acceptable replacement that will allow me to then pass in a mocked HttpClient for testing of the Api calls.
