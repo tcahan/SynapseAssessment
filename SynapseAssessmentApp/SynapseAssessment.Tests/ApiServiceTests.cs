@@ -13,7 +13,14 @@ namespace SynapseAssessment.Tests
 	{
 		private readonly Mock<IConfiguration> _configMock = new Mock<IConfiguration>();
 		private readonly Mock<ILogger<ApiService>> _logMock = new Mock<ILogger<ApiService>>();
-		private readonly MockHttpMessageHandler _handlerMock = new MockHttpMessageHandler();
+		private readonly MockHttpMessageHandler _handlerMock;
+		private readonly string _sampleOrderJson;
+
+		public ApiServiceTests()
+		{
+			_handlerMock = new MockHttpMessageHandler();
+			_sampleOrderJson = "[{\"OrderId\": 1,\"Items\": [{\"Description\": \"My item\",\"deliveryNotification\": 0,\"Status\": \"Delivered\"}]}]";
+		}
 
 		[Theory]
 		[InlineData("https://orders-api.com/orders", "https://alert-api.com/alerts", "https://update-api.com/update", true)]
@@ -48,8 +55,7 @@ namespace SynapseAssessment.Tests
 		public async Task FetchMedicalEquipmentOrders_HandlesNotSuccess()
 		{
 			// Given
-			var sampleJson = "[{\"OrderId\": 1,\"Items\": [{\"Description\": \"My item\",\"deliveryNotification\": 0,\"Status\": \"Delivered\"}]}]";
-
+			var expected = new JObject[0];
 			var ordersApiSection = new Mock<IConfigurationSection>();
 			ordersApiSection.Setup(x => x.Value).Returns("https://orders-api.com/orders");
 			_configMock.Setup(x => x.GetSection("ApiUrls:OrdersApi"))
@@ -59,11 +65,10 @@ namespace SynapseAssessment.Tests
 
 			var _api = new ApiService(_configMock.Object, _logMock.Object, _handlerMock.ToHttpClient());
 
-			// Then
+			// When
 			var result = await _api.FetchMedicalEquipmentOrders();
 
-			// When
-			var expected = new JObject[0];
+			// Then			
 			Assert.Equal(expected, result);
 		}
 
@@ -71,22 +76,20 @@ namespace SynapseAssessment.Tests
 		public async Task FetchMedicalEquipmentOrders_HandlesSuccess()
 		{
 			// Given
-			var sampleJson = "[{\"OrderId\": 1,\"Items\": [{\"Description\": \"My item\",\"deliveryNotification\": 0,\"Status\": \"Delivered\"}]}]";
-			var expected = JArray.Parse(sampleJson).ToObject<JObject[]>();
-
+			var expected = JArray.Parse(_sampleOrderJson).ToObject<JObject[]>();
 			var ordersApiSection = new Mock<IConfigurationSection>();
 			ordersApiSection.Setup(x => x.Value).Returns("https://orders-api.com/orders");
 			_configMock.Setup(x => x.GetSection("ApiUrls:OrdersApi"))
 				.Returns(ordersApiSection.Object);
 
-			_handlerMock.When("https://orders-api.com/orders").Respond(HttpStatusCode.OK, "application/json", sampleJson);
+			_handlerMock.When("https://orders-api.com/orders").Respond(HttpStatusCode.OK, "application/json", _sampleOrderJson);
 
 			var _api = new ApiService(_configMock.Object, _logMock.Object, _handlerMock.ToHttpClient());
 
-			// Then
+			// When
 			var result = await _api.FetchMedicalEquipmentOrders();
 
-			// When
+			// Then
 			Assert.Equal(expected, result);
 		}
 	}
