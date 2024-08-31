@@ -33,7 +33,6 @@ public class ApiService : IApiService
 	/// <returns>JArray of the order data returned from the Api or an empty array when unsuccessful response code returned</returns>
 	public async Task<JObject[]> FetchMedicalEquipmentOrders()
 	{
-
 		var ordersApiUrl = _config.GetValue<string>("ApiUrls:OrdersApi");
 		var response = await _httpClient.GetAsync(ordersApiUrl);
 		if (response.IsSuccessStatusCode)
